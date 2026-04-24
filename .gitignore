@@ -1,0 +1,77 @@
+# =============================================================================
+# DMRE .gitignore
+# Covers Python, Node/React, Docker secrets, and ML artefacts.
+# =============================================================================
+
+# --- Secrets ---
+.env
+*.pem
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-selfcheck.json
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# --- Alembic ---
+# Keep versions/ tracked; ignore compiled pyc inside it
+alembic/__pycache__/
+
+# --- Node / React ---
+node_modules/
+dist/
+.pnp
+.pnp.js
+*.local
+
+# --- Vite ---
+.vite/
+
+# --- ML artefacts (large binaries, re-committed via Git LFS if needed) ---
+*.pkl
+*.pt
+*.pth
+*.onnx
+*.bin
+!backend/app/services/reranker_model.pkl
+
+# --- ChromaDB local storage ---
+chroma_data/
+
+# --- Docker ---
+*.log
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# --- Claude Code ---
+.claude/
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo

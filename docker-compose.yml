@@ -1,0 +1,56 @@
+# =============================================================================
+# DMRE Docker Compose
+# Spins up PostgreSQL 15 and ChromaDB for local development.
+# Run: docker-compose up -d
+# Stop: docker-compose down
+# Wipe volumes: docker-compose down -v
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 15 — primary relational store for memories and metadata
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dmre}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dmre_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-dmre_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dmre} -d ${POSTGRES_DB:-dmre_db}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # ChromaDB — vector store for Sentence-BERT embeddings
+  # Exposed on host port 8001 to avoid clash with common port 8000.
+  # If this image fails to pull, run ChromaDB directly instead:
+  #   pip install chromadb  (already in requirements.txt)
+  #   chroma run --host localhost --port 8001 --path ./chroma_data
+  # ---------------------------------------------------------------------------
+  chromadb:
+    image: chromadb/chroma:0.5.0
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER: ""
+      CHROMA_SERVER_AUTH_PROVIDER: ""
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  chroma_data:

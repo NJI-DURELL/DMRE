@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<!--
+  popup.html — DMRE extension popup
+  Simple on/off toggle and last-capture status panel.
+  Styled with inline CSS only (no external dependencies).
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DMRE Memory Capture</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 300px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e40af, #7c3aed);
+      padding: 14px 16px 12px;
+    }
+    .header h1 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #fff;
+    }
+    .header p {
+      font-size: 11px;
+      color: #bfdbfe;
+      margin-top: 2px;
+    }
+
+    /* Toggle row */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .toggle-label {
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    /* Toggle switch */
+    .switch { position: relative; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: #475569;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    input:checked + .slider { background: #2563eb; }
+    input:checked + .slider::before { transform: translateX(20px); }
+
+    /* Status badge */
+    .status-row {
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .status-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .status-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-pill.ok       { background: #14532d; color: #86efac; }
+    .status-pill.error    { background: #450a0a; color: #fca5a5; }
+    .status-pill.idle     { background: #1e293b; color: #94a3b8; }
+
+    /* Last capture */
+    .last-capture {
+      padding: 12px 16px;
+    }
+    .last-capture .status-title { margin-bottom: 6px; }
+    .capture-title {
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .capture-url {
+      font-size: 11px;
+      color: #475569;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .capture-ts {
+      font-size: 11px;
+      color: #475569;
+      margin-top: 4px;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 8px 16px 12px;
+      text-align: center;
+      font-size: 10px;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>DMRE Memory Capture</h1>
+    <p>AI-powered browsing memory engine</p>
+  </div>
+
+  <div class="toggle-row">
+    <span class="toggle-label">Capture enabled</span>
+    <label class="switch">
+      <input type="checkbox" id="toggleCapture" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="status-row">
+    <div class="status-title">Backend status</div>
+    <span class="status-pill idle" id="backendStatus">Checking…</span>
+  </div>
+
+  <div class="last-capture" id="lastCaptureSection" style="display:none;">
+    <div class="status-title">Last captured page</div>
+    <div class="capture-title" id="lastTitle">—</div>
+    <div class="capture-url"  id="lastUrl">—</div>
+    <div class="capture-ts"   id="lastTs">—</div>
+  </div>
+
+  <div class="footer">DMRE v1.0 &nbsp;·&nbsp; localhost:8000</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
