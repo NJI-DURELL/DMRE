@@ -45,6 +45,14 @@ if not _db_url:
         "Copy .env.example → .env and fill in your PostgreSQL credentials."
     )
 
+# Render's managed Postgres exports postgresql:// (sync) and Heroku-style
+# providers sometimes use postgres://. Force the asyncpg scheme so the
+# create_async_engine call below doesn't blow up on a sync URL.
+if _db_url.startswith("postgres://"):
+    _db_url = "postgresql://" + _db_url[len("postgres://"):]
+if _db_url.startswith("postgresql://"):
+    _db_url = "postgresql+asyncpg://" + _db_url[len("postgresql://"):]
+
 
 # ---------------------------------------------------------------------------
 # Offline mode — generates SQL without a live DB connection

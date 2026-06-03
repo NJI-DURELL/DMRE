@@ -45,20 +45,34 @@ _w3 = None
 _contract = None
 
 
+class BlockchainUnavailable(RuntimeError):
+    """Raised when the blockchain layer is not configured or unreachable.
+
+    Callers (memories.py, verify.py) catch this and degrade gracefully so
+    hosted deployments without a chain still ingest and search normally.
+    """
+
+
+def is_configured() -> bool:
+    """Return True only when both an RPC URL and a contract address are set."""
+    return bool(settings.ganache_rpc_url) and bool(settings.contract_address)
+
+
 def _get_web3():
     global _w3
     if _w3 is not None:
         return _w3
+    if not settings.ganache_rpc_url:
+        raise BlockchainUnavailable("No blockchain RPC URL configured.")
     try:
         from web3 import Web3  # noqa: PLC0415
     except ImportError as exc:
-        raise ImportError("web3 is not installed. Run: pip install web3") from exc
+        raise BlockchainUnavailable("web3 is not installed.") from exc
 
     instance = Web3(Web3.HTTPProvider(settings.ganache_rpc_url))
     if not instance.is_connected():
-        raise ConnectionError(
-            f"Cannot reach Ganache at {settings.ganache_rpc_url}. "
-            "Run: ganache --port 7545 --deterministic"
+        raise BlockchainUnavailable(
+            f"Cannot reach blockchain RPC at {settings.ganache_rpc_url}."
         )
     _w3 = instance
     return _w3
@@ -69,10 +83,7 @@ def _get_contract():
     if _contract is not None:
         return _contract
     if not settings.contract_address:
-        raise ValueError(
-            "CONTRACT_ADDRESS is not set in .env. "
-            "Deploy: cd blockchain && npx hardhat run scripts/deploy.js --network ganache"
-        )
+        raise BlockchainUnavailable("CONTRACT_ADDRESS is not set.")
     from web3 import Web3  # noqa: PLC0415
 
     w3 = _get_web3()

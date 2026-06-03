@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "DMRE — Digital Memory Reconstruction Engine",
   "version": "1.0.0",
-  "description": "Silently captures browsing activity and sends it to the DMRE backend for semantic indexing and later retrieval.",
+  "description": "Search your own browsing history with natural language. Privately captures pages you visit so you can find them again later by meaning, not by keyword.",
 
   "permissions": [
     "tabs",
@@ -16,9 +16,15 @@
     "https://*/*"
   ],
 
+  "web_accessible_resources": [
+    {
+      "resources": ["config.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
 
   "content_scripts": [
@@ -31,7 +37,8 @@
   ],
 
   "action": {
-    "default_title": "Open DMRE Dashboard",
+    "default_title": "DMRE Memory Capture",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

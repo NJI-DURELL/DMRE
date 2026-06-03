@@ -14,15 +14,24 @@ import re
 from pathlib import Path
 
 
+_TESSERACT_CANDIDATES = [
+    os.environ.get("TESSERACT_CMD", ""),
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+    r"C:\Users\durel\AppData\Local\Programs\Tesseract-OCR\tesseract.exe",
+]
+
+
 def _configure_tesseract():
-    """Point pytesseract at the system Tesseract binary if TESSERACT_CMD is set."""
-    cmd = os.environ.get("TESSERACT_CMD", "")
-    if cmd:
-        try:
-            import pytesseract  # noqa: PLC0415
-            pytesseract.pytesseract.tesseract_cmd = cmd
-        except ImportError:
-            pass
+    """Auto-detect Tesseract binary: env var first, then known Windows install paths."""
+    try:
+        import pytesseract  # noqa: PLC0415
+    except ImportError:
+        return
+    for candidate in _TESSERACT_CANDIDATES:
+        if candidate and Path(candidate).exists():
+            pytesseract.pytesseract.tesseract_cmd = candidate
+            return
 
 
 _configure_tesseract()

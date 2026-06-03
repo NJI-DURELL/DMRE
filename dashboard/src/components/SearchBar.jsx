@@ -1,7 +1,6 @@
 /**
  * SearchBar.jsx — Multi-modal query input component.
  * Three modes: text (keyboard), voice (mic + MediaRecorder), image (file upload).
- * Animated mode tabs, pulsing mic ring while recording, drag-and-drop image area.
  */
 
 import { useState, useRef, useCallback } from 'react'
@@ -28,18 +27,15 @@ export default function SearchBar({ onSearch, loading }) {
   const audioChunksRef   = useRef([])
   const fileInputRef     = useRef(null)
 
-  // --- Text submit ---
   const handleTextSubmit = (e) => {
     e.preventDefault()
     if (!query.trim() || loading) return
     onSearch({ type: 'text', query: query.trim() })
   }
 
-  // --- Voice recording ---
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      // Use the browser's native format — Edge/Chrome produce audio/webm;codecs=opus
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
@@ -67,7 +63,6 @@ export default function SearchBar({ onSearch, loading }) {
     setRecording(false)
   }
 
-  // --- Image handling ---
   const handleImageFile = useCallback((file) => {
     if (!file || !file.type.startsWith('image/')) return
     setImageFile(file)
@@ -93,7 +88,7 @@ export default function SearchBar({ onSearch, loading }) {
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Mode tabs */}
-      <div className="flex gap-1 mb-4 bg-navy-800 p-1 rounded-xl border border-navy-600">
+      <div className="flex gap-1 mb-4 bg-slate-50 p-1 rounded-xl border border-slate-200">
         {MODES.map(({ id, label, Icon }) => (
           <button
             key={id}
@@ -102,8 +97,8 @@ export default function SearchBar({ onSearch, loading }) {
               flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg
               text-sm font-medium transition-all duration-200
               ${mode === id
-                ? 'bg-navy-700 text-white shadow-sm border border-navy-600'
-                : 'text-slate-500 hover:text-slate-300 hover:bg-navy-700/50'}
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'}
             `}
           >
             <Icon className="w-4 h-4" />
@@ -115,9 +110,9 @@ export default function SearchBar({ onSearch, loading }) {
       {/* Text mode */}
       {mode === 'text' && (
         <form onSubmit={handleTextSubmit} className="relative">
-          <div className="flex items-center bg-navy-800 border border-navy-600 rounded-xl overflow-hidden
-            focus-within:border-blue-500/60 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
-            <div className="pl-4 text-slate-600">
+          <div className="flex items-center bg-white border border-slate-300 rounded-xl overflow-hidden
+            focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-500/30 transition-all">
+            <div className="pl-4 text-slate-400">
               <SearchIcon className="w-5 h-5" />
             </div>
             <input
@@ -125,15 +120,15 @@ export default function SearchBar({ onSearch, loading }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="What were you reading about machine learning..."
-              className="flex-1 bg-transparent px-3 py-4 text-slate-100 placeholder-slate-600
+              className="flex-1 bg-transparent px-3 py-4 text-slate-900 placeholder-slate-400
                 text-[15px] outline-none"
               autoFocus
             />
             <button
               type="submit"
               disabled={!query.trim() || loading}
-              className="m-2 p-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-navy-700
-                disabled:text-slate-600 text-white rounded-lg transition-all duration-150
+              className="m-2 p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100
+                disabled:text-slate-400 text-white rounded-lg transition-all duration-150
                 disabled:cursor-not-allowed"
             >
               {loading
@@ -147,12 +142,11 @@ export default function SearchBar({ onSearch, loading }) {
       {/* Voice mode */}
       {mode === 'voice' && (
         <div className="flex flex-col items-center py-8 gap-6
-          bg-navy-800 border border-navy-600 rounded-xl">
+          bg-slate-50 border border-slate-200 rounded-xl">
           <p className="text-sm text-slate-500">
             {recording ? 'Recording — click to stop' : 'Click to start recording'}
           </p>
 
-          {/* Mic button with pulsing ring */}
           <div className="relative flex items-center justify-center">
             {recording && (
               <>
@@ -166,10 +160,10 @@ export default function SearchBar({ onSearch, loading }) {
               disabled={loading}
               className={`
                 relative z-10 w-16 h-16 rounded-full flex items-center justify-center
-                transition-all duration-200 shadow-lg
+                transition-all duration-200 shadow-md
                 ${recording
-                  ? 'bg-red-600 hover:bg-red-500 text-white'
-                  : 'bg-blue-600 hover:bg-blue-500 text-white'}
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'}
                 disabled:opacity-40 disabled:cursor-not-allowed
               `}
             >
@@ -211,16 +205,16 @@ export default function SearchBar({ onSearch, loading }) {
                 flex flex-col items-center justify-center gap-3 py-12 rounded-xl
                 border-2 border-dashed cursor-pointer transition-all duration-200
                 ${dragOver
-                  ? 'border-blue-500 bg-blue-500/10'
-                  : 'border-navy-600 bg-navy-800 hover:border-blue-500/50 hover:bg-navy-700'}
+                  ? 'border-blue-600 bg-blue-50'
+                  : 'border-slate-300 bg-slate-50 hover:border-blue-300 hover:bg-blue-50'}
               `}
             >
-              <UploadIcon className="w-8 h-8 text-slate-600" />
+              <UploadIcon className="w-8 h-8 text-slate-400" />
               <div className="text-center">
-                <p className="text-sm font-medium text-slate-400">
+                <p className="text-sm font-medium text-slate-700">
                   Drop an image or click to browse
                 </p>
-                <p className="text-xs text-slate-600 mt-1">PNG, JPG, WEBP</p>
+                <p className="text-xs text-slate-400 mt-1">PNG, JPG, WEBP</p>
               </div>
               <input
                 ref={fileInputRef}
@@ -231,13 +225,13 @@ export default function SearchBar({ onSearch, loading }) {
               />
             </div>
           ) : (
-            <div className="relative rounded-xl overflow-hidden border border-navy-600">
+            <div className="relative rounded-xl overflow-hidden border border-slate-300">
               <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover" />
               <button
                 onClick={clearImage}
-                className="absolute top-2 right-2 w-7 h-7 bg-navy-900/80 hover:bg-navy-800
-                  rounded-lg flex items-center justify-center text-slate-400 hover:text-white
-                  text-xs font-bold transition-all"
+                className="absolute top-2 right-2 w-7 h-7 bg-white/90 hover:bg-white
+                  rounded-lg flex items-center justify-center text-slate-700 hover:text-slate-900
+                  text-xs font-bold transition-all shadow-sm"
               >
                 ×
               </button>
@@ -248,9 +242,9 @@ export default function SearchBar({ onSearch, loading }) {
             <button
               onClick={handleImageSubmit}
               disabled={loading}
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:bg-navy-700
-                disabled:text-slate-600 text-white rounded-xl font-medium text-sm
-                flex items-center justify-center gap-2 transition-all"
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100
+                disabled:text-slate-400 text-white rounded-xl font-medium text-sm
+                flex items-center justify-center gap-2 transition-all shadow-sm"
             >
               {loading ? <SpinnerIcon className="w-4 h-4" /> : <SendIcon className="w-4 h-4" />}
               {loading ? 'Searching…' : 'Search with this image'}
@@ -261,4 +255,3 @@ export default function SearchBar({ onSearch, loading }) {
     </div>
   )
 }
-

@@ -1,31 +1,33 @@
 /**
- * MemoryCard.jsx — Single search result card.
- * Shows title, domain, snippet, engagement metadata, and a Verify button that
- * calls the blockchain integrity endpoint and updates its state in place.
+ * MemoryCard.jsx — Single search result card (light theme).
  */
 
 import { useState } from 'react'
-import { ShieldIcon, ShieldCheckIcon, ShieldXIcon, ClockIcon, LinkIcon, SpinnerIcon } from './Icons'
+import { ShieldIcon, ShieldCheckIcon, ShieldXIcon, ClockIcon, SpinnerIcon } from './Icons'
 import { verifyMemory } from '../services/api'
+import { buildFragmentUrl } from '../utils/textFragment'
 
 const RANK_COLORS = [
-  'from-amber-500 to-orange-500',   // 1
-  'from-slate-400 to-slate-500',    // 2
-  'from-orange-600 to-orange-700',  // 3
-  'from-blue-600 to-blue-700',      // 4
-  'from-blue-700 to-violet-700',    // 5
+  'bg-blue-600',
+  'bg-blue-400',
+  'bg-blue-300 text-blue-800',
+  'bg-blue-100 text-blue-800',
+  'bg-blue-100 text-blue-800',
 ]
 
 function extractDomain(url) {
+  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
+}
+
+function faviconUrl(url) {
   try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return url
-  }
+    const domain = new URL(url).hostname
+    return `https://www.google.com/s2/favicons?sz=32&domain=${domain}`
+  } catch { return null }
 }
 
 function relativeTime(isoString) {
-  const diff = Date.now() - new Date(isoString).getTime()
+  const diff  = Date.now() - new Date(isoString).getTime()
   const mins  = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days  = Math.floor(diff / 86400000)
@@ -40,9 +42,27 @@ function formatDwell(seconds) {
   return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`
 }
 
-export default function MemoryCard({ result, rank }) {
-  const [verifyState, setVerifyState] = useState('idle') // idle | loading | ok | fail
-  const [verifyMsg, setVerifyMsg]     = useState('')
+function highlightText(text, query) {
+  if (!query || !text) return [text]
+  const tokens = [...new Set(
+    query.toLowerCase().split(/\s+/).filter(t => t.length > 2)
+  )]
+  if (tokens.length === 0) return [text]
+
+  const pattern = new RegExp(`(${tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi')
+  const parts   = text.split(pattern)
+
+  return parts.map((part, i) =>
+    pattern.test(part)
+      ? <mark key={i} className="bg-blue-100 text-blue-800 rounded px-0.5">{part}</mark>
+      : part
+  )
+}
+
+export default function MemoryCard({ result, rank, query }) {
+  const [verifyState, setVerifyState] = useState('idle')
+  const [verifyMsg,   setVerifyMsg]   = useState('')
+  const [expanded,    setExpanded]    = useState(false)
 
   const handleVerify = async () => {
     if (verifyState === 'loading') return
@@ -50,87 +70,112 @@ export default function MemoryCard({ result, rank }) {
     try {
       const data = await verifyMemory(result.memory_id)
       setVerifyState(data.verified ? 'ok' : 'fail')
-      setVerifyMsg(
-        data.verified
-          ? `Verified · block ${data.block_number}`
-          : 'Hash mismatch — possible tampering'
-      )
+      setVerifyMsg(data.verified ? `Verified · block ${data.block_number}` : 'Hash mismatch — possible tampering')
     } catch (err) {
       setVerifyState('fail')
       setVerifyMsg(err.response?.data?.detail || 'Verification unavailable')
     }
   }
 
+  const openPage  = () => window.open(buildFragmentUrl(result.url, result.snippet, query), '_blank', 'noopener,noreferrer')
   const scorePercent = Math.round(result.semantic_similarity * 100)
+  const favicon   = faviconUrl(result.url)
+  const domain    = extractDomain(result.url)
+
+  const snippetShort  = result.snippet?.slice(0, 300) || ''
+  const snippetFull   = result.snippet || ''
+  const hasMore       = snippetFull.length > 300
+  const displayText   = expanded ? snippetFull : snippetShort
 
   return (
-    <div className="group relative bg-navy-800 border border-navy-600 rounded-xl p-5
-      hover:border-blue-500/40 transition-all duration-200 animate-fade-up
-      hover:shadow-lg hover:shadow-blue-900/10">
-
-      {/* Left accent bar on hover */}
-      <div className="absolute left-0 top-4 bottom-4 w-0.5 rounded-full bg-blue-500
+    <div
+      onClick={openPage}
+      className="group relative bg-white border border-slate-200 rounded-xl p-5
+        hover:border-blue-300 transition-all duration-200 animate-fade-up
+        hover:shadow-md hover:shadow-blue-100 cursor-pointer"
+    >
+      <div className="absolute left-0 top-4 bottom-4 w-0.5 rounded-full bg-blue-600
         opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
-      <div className="flex items-start gap-4">
-        {/* Rank badge */}
-        <div className={`
-          flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
-          text-xs font-bold text-white bg-gradient-to-br shadow-sm
-          ${RANK_COLORS[(rank - 1) % RANK_COLORS.length]}
-        `}>
-          {rank}
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
+          {favicon ? (
+            <img
+              src={favicon}
+              alt={domain}
+              className="w-8 h-8 rounded-lg object-contain bg-slate-100 p-1"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          ) : (
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center
+              text-xs font-bold text-white shadow-sm
+              ${RANK_COLORS[(rank - 1) % RANK_COLORS.length]}`}>
+              {rank}
+            </div>
+          )}
+          {favicon && (
+            <div className={`w-5 h-5 rounded-md flex items-center justify-center
+              text-[10px] font-bold text-white
+              ${RANK_COLORS[(rank - 1) % RANK_COLORS.length]}`}>
+              {rank}
+            </div>
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* Title */}
-          <h3 className="text-[15px] font-semibold text-slate-100 leading-snug
-            group-hover:text-white transition-colors truncate">
-            {result.title || '(Untitled page)'}
-          </h3>
-
-          {/* Domain */}
-          <div className="flex items-center gap-1.5 mt-1">
-            <LinkIcon className="w-3 h-3 text-slate-600 flex-shrink-0" />
-            <a
-              href={result.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-slate-500 hover:text-blue-400 transition-colors truncate"
-            >
-              {extractDomain(result.url)}
-            </a>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-[15px] font-semibold text-slate-900 leading-snug
+              group-hover:text-blue-800 transition-colors line-clamp-2">
+              {highlightText(result.title || '(Untitled page)', query)}
+            </h3>
+            <span className="flex-shrink-0 text-xs text-slate-400
+              group-hover:text-blue-600 transition-colors mt-0.5">↗</span>
           </div>
 
-          {/* Snippet */}
-          <p className="mt-2.5 text-[13px] text-slate-400 leading-relaxed line-clamp-2">
-            {result.snippet || 'No preview available.'}
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-xs text-slate-500 group-hover:text-blue-700
+              transition-colors truncate">{domain}</span>
+          </div>
+
+          <p className="mt-2.5 text-[13px] text-slate-700 leading-relaxed">
+            {highlightText(displayText, query)}
+            {!expanded && hasMore && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded(true) }}
+                className="ml-1 text-blue-700 hover:text-blue-800 text-xs font-medium"
+              >
+                show more
+              </button>
+            )}
+            {expanded && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded(false) }}
+                className="ml-1 text-blue-700 hover:text-blue-800 text-xs font-medium"
+              >
+                show less
+              </button>
+            )}
           </p>
 
-          {/* Metadata row */}
           <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3">
-            {/* Visited time */}
-            <div className="flex items-center gap-1.5 text-xs text-slate-600">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <ClockIcon className="w-3.5 h-3.5" />
               <span>{relativeTime(result.visited_at)}</span>
             </div>
-
-            {/* Dwell time */}
             {result.dwell_time > 0 && (
-              <span className="text-xs text-slate-600">
-                {formatDwell(result.dwell_time)} on page
-              </span>
+              <span className="text-xs text-slate-500">{formatDwell(result.dwell_time)} read</span>
             )}
-
-            {/* Relevance bar */}
+            {result.visit_count > 1 && (
+              <span className="text-xs text-slate-500">{result.visit_count}× visited</span>
+            )}
             <div className="flex items-center gap-2 ml-auto">
-              <div className="w-16 h-1 bg-navy-600 rounded-full overflow-hidden">
+              <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-full score-fill rounded-full transition-all duration-500"
                   style={{ width: `${scorePercent}%` }}
                 />
               </div>
-              <span className="text-xs text-slate-600 tabular-nums w-8 text-right">
+              <span className="text-xs text-slate-500 tabular-nums w-8 text-right">
                 {scorePercent}%
               </span>
             </div>
@@ -138,25 +183,24 @@ export default function MemoryCard({ result, rank }) {
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="mt-4 pt-3.5 border-t border-navy-600/60 flex items-center justify-between gap-3">
-        {/* Verify result message */}
-        <div className="text-xs text-slate-600 truncate">
-          {verifyState === 'ok'   && <span className="text-emerald-500">{verifyMsg}</span>}
-          {verifyState === 'fail' && <span className="text-red-400">{verifyMsg}</span>}
+      <div
+        className="mt-4 pt-3.5 border-t border-slate-200 flex items-center justify-between gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-xs text-slate-500 truncate">
+          {verifyState === 'ok'   && <span className="text-blue-800">{verifyMsg}</span>}
+          {verifyState === 'fail' && <span className="text-red-600">{verifyMsg}</span>}
         </div>
-
-        {/* Verify button */}
         <button
           onClick={handleVerify}
           disabled={verifyState === 'loading'}
           className={`
             flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg
             text-xs font-medium transition-all duration-200
-            ${verifyState === 'idle'    && 'bg-navy-700 hover:bg-navy-600 text-slate-400 hover:text-slate-200 border border-navy-600'}
-            ${verifyState === 'loading' && 'bg-navy-700 text-slate-500 border border-navy-600 cursor-not-allowed'}
-            ${verifyState === 'ok'      && 'bg-emerald-900/40 text-emerald-400 border border-emerald-800/50'}
-            ${verifyState === 'fail'    && 'bg-red-900/30 text-red-400 border border-red-800/40'}
+            ${verifyState === 'idle'    && 'bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-800 border border-slate-200'}
+            ${verifyState === 'loading' && 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
+            ${verifyState === 'ok'      && 'bg-blue-100 text-blue-800 border border-blue-200'}
+            ${verifyState === 'fail'    && 'bg-red-50 text-red-700 border border-red-200'}
           `}
         >
           {verifyState === 'idle'    && <><ShieldIcon className="w-3.5 h-3.5" />Verify</>}

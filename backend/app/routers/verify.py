@@ -15,8 +15,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.deps import get_current_verified_user
 from app.models.blockchain_record import BlockchainRecord
 from app.models.memory import Memory
+from app.models.user import User
 from app.schemas.search import VerifyResponse
 from app.services import blockchain_service
 
@@ -37,13 +39,21 @@ router = APIRouter()
 async def verify_memory(
     memory_id: str,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_verified_user),
 ) -> VerifyResponse:
     # ------------------------------------------------------------------
-    # 1. Fetch Memory from PostgreSQL
+    # 1. Fetch Memory from PostgreSQL — must belong to current user
     # ------------------------------------------------------------------
-    result = await db.execute(select(Memory).where(Memory.id == memory_id))
+    result = await db.execute(
+        select(Memory).where(
+            Memory.id == memory_id,
+            Memory.user_id == current_user.id,
+        )
+    )
     memory: Memory | None = result.scalar_one_or_none()
     if memory is None:
+        # Same 404 whether the memory doesn't exist or belongs to someone else,
+        # so an attacker can't probe for IDs across users.
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Memory '{memory_id}' not found.",
@@ -80,7 +90,7 @@ async def verify_memory(
     # ------------------------------------------------------------------
     try:
         verification = blockchain_service.verify(memory_id, expected_hash)
-    except (ConnectionError, ValueError) as exc:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Blockchain verification unavailable: {exc}",

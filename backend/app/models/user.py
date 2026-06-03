@@ -5,7 +5,9 @@
 # operate anonymously (user_id = NULL on memories) or with a linked account.
 # =============================================================================
 
-from sqlalchemy import String
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, generate_uuid
@@ -34,6 +36,34 @@ class User(Base, TimestampMixin):
     )
     # Hashed password (bcrypt); nullable to support future OAuth/SSO extension.
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Admin flag — gates access to /api/admin/* endpoints. Defaults to false;
+    # promote a user with `python -m app.cli grant-admin <email>`.
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
+    # ---- Email verification (OTP) ----
+    # email_verified gates every protected endpoint other than /api/auth/me,
+    # /api/auth/verify-email, /api/auth/resend-otp, and /api/account.
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
+    )
+    # bcrypt hash of the most recently issued 6-digit code.
+    email_otp_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email_otp_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    # Wrong-code counter; locks after 5 attempts until a new OTP is requested.
+    email_otp_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0",
+    )
+    # Timestamp of the most recent resend, used for simple rate-limiting.
+    email_otp_last_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
 
     # Relationships — back-populated by child models
     memories: Mapped[list["Memory"]] = relationship(  # noqa: F821

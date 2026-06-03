@@ -3,15 +3,10 @@ export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
-      colors: {
-        navy: {
-          950: '#0a0f1e',
-          900: '#0d1425',
-          800: '#111827',
-          700: '#162032',
-          600: '#1e293b',
-        },
-      },
+      // No custom color palette. We use Tailwind's built-in `blue` (primary
+      // actions, accents) and `slate` (text, borders, surfaces) so utility
+      // classes always exist no matter what — `bg-blue-600` will never be
+      // missing the way a custom `bg-mint-500` could.
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],

@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <!--
-  popup.html — DMRE extension popup
-  Simple on/off toggle and last-capture status panel.
-  Styled with inline CSS only (no external dependencies).
+  popup.html — DMRE extension popup (light theme: white + blue).
+  Auth mode: signup / login form. Signed-in mode: capture toggle + status.
 -->
 <html lang="en">
 <head>
@@ -12,50 +11,140 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --blue-50:  #eff6ff;
+      --blue-100: #dbeafe;
+      --blue-200: #bfdbfe;
+      --blue-300: #93c5fd;
+      --blue-500: #3b82f6;
+      --blue-600: #2563eb;
+      --blue-700: #1d4ed8;
+      --blue-800: #1e40af;
+      --slate-900: #0f172a;
+      --slate-700: #334155;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-300: #cbd5e1;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50:  #f8fafc;
+      --bg:        #ffffff;
+    }
+
     body {
-      width: 300px;
+      width: 320px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-size: 13px;
-      background: #0f172a;
-      color: #e2e8f0;
+      background: var(--bg);
+      color: var(--slate-900);
     }
 
     /* Header */
     .header {
-      background: linear-gradient(135deg, #1e40af, #7c3aed);
+      background: linear-gradient(135deg, var(--blue-600), var(--blue-800));
       padding: 14px 16px 12px;
-    }
-    .header h1 {
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
       color: #fff;
     }
-    .header p {
+    .header h1 { font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
+    .header p  { font-size: 11px; color: var(--blue-100); margin-top: 2px; }
+
+    /* Sections */
+    .section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--slate-200);
+    }
+    .section:last-child { border-bottom: none; }
+    .section-title {
       font-size: 11px;
-      color: #bfdbfe;
-      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--slate-500);
+      margin-bottom: 8px;
     }
 
-    /* Toggle row */
+    /* Form */
+    .field { margin-bottom: 10px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: var(--slate-700);
+      margin-bottom: 4px;
+    }
+    .field input {
+      width: 100%;
+      padding: 8px 10px;
+      background: #ffffff;
+      border: 1px solid var(--slate-300);
+      border-radius: 6px;
+      color: var(--slate-900);
+      font-size: 13px;
+      outline: none;
+      transition: border 0.15s, box-shadow 0.15s;
+    }
+    .field input::placeholder { color: var(--slate-400); }
+    .field input:focus {
+      border-color: var(--blue-600);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 9px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: var(--blue-600); color: #fff; }
+    .btn-primary:hover { background: var(--blue-700); }
+    .btn-primary:disabled { background: var(--slate-100); color: var(--slate-400); cursor: not-allowed; }
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--slate-700);
+      border: 1px solid var(--slate-300);
+    }
+    .btn-secondary:hover { background: var(--slate-50); color: var(--slate-900); }
+
+    .switch-link {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--slate-500);
+    }
+    .switch-link a {
+      color: var(--blue-700);
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .switch-link a:hover { text-decoration: underline; }
+
+    .form-error {
+      background: #fef2f2;
+      color: #b91c1c;
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 5px;
+      border: 1px solid #fecaca;
+      margin-bottom: 8px;
+      display: none;
+    }
+    .form-error.show { display: block; }
+
+    /* Toggle */
     .toggle-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px;
-      border-bottom: 1px solid #1e293b;
     }
-    .toggle-label {
-      font-weight: 600;
-      color: #f1f5f9;
-    }
-
-    /* Toggle switch */
+    .toggle-label { font-weight: 600; color: var(--slate-900); }
     .switch { position: relative; width: 44px; height: 24px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider {
       position: absolute; inset: 0;
-      background: #475569;
+      background: var(--slate-300);
       border-radius: 24px;
       cursor: pointer;
       transition: background 0.2s;
@@ -68,22 +157,12 @@
       background: #fff;
       border-radius: 50%;
       transition: transform 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
     }
-    input:checked + .slider { background: #2563eb; }
+    input:checked + .slider { background: var(--blue-600); }
     input:checked + .slider::before { transform: translateX(20px); }
 
-    /* Status badge */
-    .status-row {
-      padding: 12px 16px;
-      border-bottom: 1px solid #1e293b;
-    }
-    .status-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #64748b;
-      margin-bottom: 6px;
-    }
+    /* Status pill */
     .status-pill {
       display: inline-block;
       padding: 2px 10px;
@@ -91,42 +170,51 @@
       font-size: 12px;
       font-weight: 600;
     }
-    .status-pill.ok       { background: #14532d; color: #86efac; }
-    .status-pill.error    { background: #450a0a; color: #fca5a5; }
-    .status-pill.idle     { background: #1e293b; color: #94a3b8; }
+    .status-pill.ok    { background: var(--blue-100); color: var(--blue-800); }
+    .status-pill.error { background: #fee2e2;        color: #b91c1c; }
+    .status-pill.idle  { background: var(--slate-100); color: var(--slate-500); }
 
-    /* Last capture */
-    .last-capture {
-      padding: 12px 16px;
+    /* Account */
+    .account-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
     }
-    .last-capture .status-title { margin-bottom: 6px; }
-    .capture-title {
-      color: #cbd5e1;
+    .account-info { min-width: 0; flex: 1; }
+    .account-email {
+      font-size: 12px;
+      color: var(--slate-900);
+      font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .capture-url {
+    .account-username { font-size: 11px; color: var(--slate-500); }
+
+    .capture-title {
+      color: var(--slate-900);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .capture-url, .capture-ts {
       font-size: 11px;
-      color: #475569;
+      color: var(--slate-500);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       margin-top: 2px;
     }
-    .capture-ts {
-      font-size: 11px;
-      color: #475569;
-      margin-top: 4px;
-    }
 
-    /* Footer */
     .footer {
       padding: 8px 16px 12px;
       text-align: center;
       font-size: 10px;
-      color: #334155;
+      color: var(--slate-400);
     }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -135,28 +223,79 @@
     <p>AI-powered browsing memory engine</p>
   </div>
 
-  <div class="toggle-row">
-    <span class="toggle-label">Capture enabled</span>
-    <label class="switch">
-      <input type="checkbox" id="toggleCapture" />
-      <span class="slider"></span>
-    </label>
+  <!-- AUTH SECTION -->
+  <div id="authSection" class="section hidden">
+    <div class="section-title" id="authTitle">Sign in</div>
+    <div class="form-error" id="authError"></div>
+
+    <div class="field">
+      <label for="authEmail">Email</label>
+      <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email" />
+    </div>
+
+    <div class="field" id="authUsernameField" style="display: none;">
+      <label for="authUsername">Username (optional)</label>
+      <input type="text" id="authUsername" placeholder="jane" autocomplete="username" />
+    </div>
+
+    <div class="field">
+      <label for="authPassword">Password</label>
+      <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+
+    <button class="btn btn-primary" id="authSubmit">Sign in</button>
+
+    <div class="switch-link">
+      <span id="authSwitchText">Don't have an account?</span>
+      <a id="authSwitchLink">Create one</a>
+    </div>
   </div>
 
-  <div class="status-row">
-    <div class="status-title">Backend status</div>
-    <span class="status-pill idle" id="backendStatus">Checking…</span>
+  <!-- SIGNED-IN SECTION -->
+  <div id="appSection" class="hidden">
+    <div class="section">
+      <div class="section-title">Account</div>
+      <div class="account-row">
+        <div class="account-info">
+          <div class="account-email" id="accountEmail">—</div>
+          <div class="account-username" id="accountUsername">—</div>
+        </div>
+        <button class="btn btn-secondary" id="logoutBtn" style="width: auto; padding: 6px 10px;">
+          Sign out
+        </button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="toggle-row">
+        <span class="toggle-label">Capture enabled</span>
+        <label class="switch">
+          <input type="checkbox" id="toggleCapture" />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Backend status</div>
+      <span class="status-pill idle" id="backendStatus">Checking…</span>
+    </div>
+
+    <div class="section" id="lastCaptureSection" style="display:none;">
+      <div class="section-title">Last captured page</div>
+      <div class="capture-title" id="lastTitle">—</div>
+      <div class="capture-url"  id="lastUrl">—</div>
+      <div class="capture-ts"   id="lastTs">—</div>
+    </div>
+
+    <div class="section">
+      <button class="btn btn-primary" id="openDashboardBtn">Open dashboard</button>
+    </div>
   </div>
 
-  <div class="last-capture" id="lastCaptureSection" style="display:none;">
-    <div class="status-title">Last captured page</div>
-    <div class="capture-title" id="lastTitle">—</div>
-    <div class="capture-url"  id="lastUrl">—</div>
-    <div class="capture-ts"   id="lastTs">—</div>
-  </div>
+  <div class="footer">DMRE v1.0</div>
 
-  <div class="footer">DMRE v1.0 &nbsp;·&nbsp; localhost:8000</div>
-
+  <script src="config.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

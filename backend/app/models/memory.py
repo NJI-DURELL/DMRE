@@ -22,11 +22,12 @@ class Memory(Base, TimestampMixin):
         default=generate_uuid,
     )
 
-    # Nullable FK: extension can capture pages without a logged-in user.
-    user_id: Mapped[str | None] = mapped_column(
+    # Every memory is owned by exactly one user — multi-tenancy is enforced
+    # at the schema level so a coding mistake cannot leak data across users.
+    user_id: Mapped[str] = mapped_column(
         String(32),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
         index=True,
     )
 
@@ -42,6 +43,18 @@ class Memory(Base, TimestampMixin):
         nullable=False,
         default=0.0,
         doc="Seconds spent on the page, reported by the extension.",
+    )
+    click_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        doc="Number of clicks on the page.",
+    )
+    scroll_depth: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.0,
+        doc="Fraction of page scrolled (0.0–1.0).",
     )
     visited_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -59,7 +72,7 @@ class Memory(Base, TimestampMixin):
     )
 
     # --- Relationships ---
-    user: Mapped["User | None"] = relationship(  # noqa: F821
+    user: Mapped["User"] = relationship(  # noqa: F821
         back_populates="memories",
         lazy="select",
     )

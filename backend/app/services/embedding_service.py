@@ -3,11 +3,18 @@
 # Sentence-BERT embedding service for the DMRE semantic retrieval pipeline.
 # Wraps the all-MiniLM-L6-v2 model (384-dim vectors) as a module-level
 # singleton so the ~80 MB model is loaded once and reused across all requests.
+#
+# Query-level LRU cache: identical queries (same text, same case) skip
+# re-embedding entirely — near-zero latency on repeated searches.
 # =============================================================================
 
 from __future__ import annotations
 
-_model = None  # lazy singleton
+from collections import OrderedDict
+
+_model = None          # lazy singleton — loaded once, reused forever
+_CACHE_MAX  = 512      # maximum cached query embeddings
+_embed_cache: OrderedDict[str, list[float]] = OrderedDict()
 
 
 def _get_model():
@@ -23,9 +30,13 @@ def _get_model():
             "Run: pip install sentence-transformers==2.7.0"
         ) from exc
 
-    # all-MiniLM-L6-v2 is the only model permitted by the project constraints.
     _model = SentenceTransformer("all-MiniLM-L6-v2")
     return _model
+
+
+def warmup() -> None:
+    """Pre-load the model at startup so the first real query has no cold-start delay."""
+    _get_model()
 
 
 def embed(texts: list[str]) -> list[list[float]]:
@@ -44,5 +55,19 @@ def embed(texts: list[str]) -> list[list[float]]:
 
 
 def embed_query(text: str) -> list[float]:
-    """Convenience wrapper — embed a single query string and return its vector."""
-    return embed([text])[0]
+    """
+    Embed a single query string.
+    Results are cached by exact text — repeated identical queries cost ~0 ms.
+    Cache is capped at _CACHE_MAX entries (LRU eviction).
+    """
+    if text in _embed_cache:
+        _embed_cache.move_to_end(text)   # mark as recently used
+        return _embed_cache[text]
+
+    vector = embed([text])[0]
+
+    if len(_embed_cache) >= _CACHE_MAX:
+        _embed_cache.popitem(last=False)  # evict least-recently-used entry
+
+    _embed_cache[text] = vector
+    return vector

@@ -16,7 +16,13 @@ class TextSearchRequest(BaseModel):
     """Request body for POST /api/search/text."""
 
     query: str = Field(..., min_length=1, description="Raw query string from the user.")
-    top_k: int = Field(default=5, ge=1, le=20, description="Max results to return.")
+    top_k: int = Field(default=10, ge=1, le=50, description="Max results to return.")
+
+
+class EmailExportResponse(BaseModel):
+    """Returned by /api/*/email-export endpoints."""
+    sent_to: str
+    items: int
 
 
 class SearchResult(BaseModel):
@@ -25,7 +31,7 @@ class SearchResult(BaseModel):
     memory_id: str
     url: str
     title: str
-    snippet: str = Field(description="First 300 chars of the best-matching chunk.")
+    snippet: str = Field(description="Full text of the best-matching chunk for this memory.")
     score: float = Field(description="XGBoost re-ranker predicted relevance score.")
     semantic_similarity: float = Field(description="Raw cosine similarity from ChromaDB.")
     visited_at: datetime
@@ -44,6 +50,10 @@ class SearchResponse(BaseModel):
     query_type: str = Field(description="One of: text, voice, image.")
     results: list[SearchResult]
     result_count: int
+    not_found: bool = Field(
+        default=False,
+        description="True when the query matched nothing in the recorded memory store.",
+    )
 
 
 class VerifyResponse(BaseModel):
