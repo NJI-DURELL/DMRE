@@ -82,13 +82,16 @@ services:
         sync: false
 
       # ---- SMTP (REQUIRED — signup returns 503 without it) ----
-      # Recommended: Resend (free 100/day). Set these in the Render dashboard:
-      #   SMTP_HOST   smtp.resend.com
+      # Use Gmail + App Password (free, 500/day):
+      #   1. Enable 2-Step Verification at myaccount.google.com/security
+      #   2. Go to myaccount.google.com/apppasswords → Mail → Other → "DMRE" → Generate
+      #   3. Set these in the Render dashboard:
+      #   SMTP_HOST   smtp.gmail.com
       #   SMTP_PORT   587
       #   SMTP_TLS    starttls
-      #   SMTP_USER   resend
-      #   SMTP_PASS   re_xxxxxxxxxxxxxxxxxxxx
-      #   SMTP_FROM   "DMRE <noreply@yourdomain.com>"   (must be a verified sender)
+      #   SMTP_USER   you@gmail.com
+      #   SMTP_PASS   <16-char app password, no spaces>
+      #   SMTP_FROM   "DMRE <you@gmail.com>"
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
