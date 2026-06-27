@@ -126,11 +126,32 @@ class Settings(BaseSettings):
             "Extension ID (chrome-extension://<id>) before going live."
         ),
     )
+    enable_docs: bool = Field(
+        default=True,
+        description="Expose /docs and /redoc. Set ENABLE_DOCS=false in production.",
+    )
+    extension_id: str = Field(
+        default="",
+        description=(
+            "Published Chrome Extension ID (e.g. abcdefghijklmnopabcdefghijklmnop). "
+            "When set, replaces the chrome-extension://* wildcard in CORS_ORIGINS "
+            "with the specific chrome-extension://<id> origin."
+        ),
+    )
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """Parse the comma-separated CORS_ORIGINS string into a list."""
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        """Parse CORS_ORIGINS into a list, substituting the specific extension ID when known."""
+        origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        if self.extension_id:
+            specific = f"chrome-extension://{self.extension_id}"
+            origins = [
+                specific if o == "chrome-extension://*" else o
+                for o in origins
+            ]
+            if specific not in origins:
+                origins.append(specific)
+        return origins
 
     model_config = SettingsConfigDict(
         env_file=str(_ENV_FILE),

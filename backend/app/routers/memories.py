@@ -5,13 +5,13 @@
 # → anchor hash on Ganache (skipped gracefully if not deployed yet).
 # =============================================================================
 
-from __future__ import annotations
-
 import hashlib
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+
+from app.limiter import limiter, _user_id_or_ip
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,7 +52,9 @@ router = APIRouter()
         "on the local Ganache blockchain."
     ),
 )
+@limiter.limit("100/day", key_func=_user_id_or_ip)
 async def create_memory(
+    request: Request,
     payload: MemoryCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),

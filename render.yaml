@@ -67,10 +67,18 @@ services:
         value: "43200"
 
       # ---- CORS ----
-      # Fill in via the Render dashboard once you know the dashboard origin
-      # and the published Chrome extension ID, e.g.:
-      #   https://dmre-dashboard.onrender.com,chrome-extension://abcdef...
+      # Fill in via the Render dashboard once you know the dashboard origin, e.g.:
+      #   https://dmre-dashboard.onrender.com
+      # (chrome-extension://<id> is added automatically via EXTENSION_ID below)
       - key: CORS_ORIGINS
+        sync: false
+
+      # ---- Chrome Extension ID ----
+      # Set to the 32-char ID shown in the Chrome Web Store after submission.
+      # When set, replaces the chrome-extension://* wildcard with the specific
+      # chrome-extension://<id> origin in CORS so only your extension can reach
+      # the backend. Leave blank during development.
+      - key: EXTENSION_ID
         sync: false
 
       # ---- SMTP (REQUIRED — signup returns 503 without it) ----
@@ -98,6 +106,12 @@ services:
       #   https://dmre-dashboard.onrender.com
       - key: APP_BASE_URL
         sync: false
+
+      # ---- API docs ----
+      # Disable Swagger / ReDoc in production so the API surface is not
+      # publicly browsable. Set to true only when debugging a live deploy.
+      - key: ENABLE_DOCS
+        value: "false"
 
       # ---- Blockchain (disabled by default) ----
       - key: GANACHE_RPC_URL

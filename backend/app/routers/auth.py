@@ -8,14 +8,14 @@
 # email" screen until they POST the correct code back to /verify-email.
 # =============================================================================
 
-from __future__ import annotations
-
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
+
+from app.limiter import limiter
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,7 +103,8 @@ def _stamp_new_otp(user: User) -> str:
     status_code=status.HTTP_201_CREATED,
     summary="Create a new account, send an OTP email, and return an access token.",
 )
-async def signup(payload: SignupRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+@limiter.limit("5/minute")
+async def signup(request: Request, payload: SignupRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     email = payload.email.lower().strip()
 
     existing = await db.execute(select(User).where(User.email == email))
@@ -164,7 +165,9 @@ async def signup(payload: SignupRequest, db: AsyncSession = Depends(get_db)) -> 
     response_model=TokenResponse,
     summary="Exchange email + password for a JWT access token (OAuth2 form).",
 )
+@limiter.limit("10/minute")
 async def login_form(
+    request: Request,
     form: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
@@ -177,7 +180,8 @@ async def login_form(
     response_model=TokenResponse,
     summary="JSON login alternative used by the dashboard and extension.",
 )
-async def login_json(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+@limiter.limit("10/minute")
+async def login_json(request: Request, payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     return await _authenticate(payload.email.lower().strip(), payload.password, db)
 
 
@@ -223,10 +227,13 @@ async def verify_email(
         # Already verified — just return the current state.
         return UserPublic.model_validate(current_user)
 
+    otp_exp = current_user.email_otp_expires_at
+    if otp_exp is not None and otp_exp.tzinfo is None:
+        otp_exp = otp_exp.replace(tzinfo=timezone.utc)
     if (
         current_user.email_otp_hash is None
-        or current_user.email_otp_expires_at is None
-        or current_user.email_otp_expires_at < datetime.now(timezone.utc)
+        or otp_exp is None
+        or otp_exp < datetime.now(timezone.utc)
     ):
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
@@ -243,6 +250,7 @@ async def verify_email(
     if not verify_password(submitted, current_user.email_otp_hash):
         current_user.email_otp_attempts += 1
         await db.flush()
+        await db.commit()  # persist counter before raising so rollback can't undo it
         remaining = OTP_MAX_ATTEMPTS - current_user.email_otp_attempts
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -271,6 +279,8 @@ async def resend_otp(
         return UserPublic.model_validate(current_user)
 
     last = current_user.email_otp_last_sent_at
+    if last is not None and last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
     if last is not None:
         elapsed = (datetime.now(timezone.utc) - last).total_seconds()
         if elapsed < OTP_RESEND_COOLDOWN_SECONDS:

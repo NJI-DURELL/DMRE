@@ -5,8 +5,6 @@
 # Sentence-BERT + ChromaDB top-20 → XGBoost re-ranker → top-5 results.
 # =============================================================================
 
-from __future__ import annotations
-
 import logging
 import tempfile
 import time
@@ -14,7 +12,9 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
+
+from app.limiter import limiter, _user_id_or_ip
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -261,7 +261,9 @@ async def _is_anchored(memory_id: str, db: AsyncSession) -> bool:
     response_model=SearchResponse,
     summary="Semantic text search",
 )
+@limiter.limit("60/minute", key_func=_user_id_or_ip)
 async def search_text(
+    request: Request,
     body: TextSearchRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_verified_user),

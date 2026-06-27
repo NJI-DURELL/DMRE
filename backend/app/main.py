@@ -12,10 +12,12 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
+from app.limiter import limiter
 from app.services.blockchain_service import BlockchainUnavailable
 
 # ---------------------------------------------------------------------------
@@ -66,10 +68,12 @@ app = FastAPI(
         "content integrity via a local Ganache blockchain."
     ),
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
     lifespan=lifespan,
 )
+
+app.state.limiter = limiter
 
 # ---------------------------------------------------------------------------
 # CORS middleware
@@ -108,6 +112,14 @@ app.add_middleware(CORSMiddleware, **_build_cors_args(settings.cors_origins_list
 # Convert every unhandled error into a clean JSON response so the dashboard,
 # extension, and curl users never see an HTML stack trace or a hung request.
 # ---------------------------------------------------------------------------
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(_: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Too many requests — {exc.detail}. Please slow down."},
+    )
+
+
 @app.exception_handler(BlockchainUnavailable)
 async def _blockchain_unavailable_handler(_: Request, exc: BlockchainUnavailable):
     return JSONResponse(
